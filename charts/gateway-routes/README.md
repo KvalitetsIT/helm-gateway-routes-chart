@@ -1,7 +1,5 @@
 # gateway-routes
 
-![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.0.0](https://img.shields.io/badge/AppVersion-1.0.0-informational?style=flat-square)
-
 Helm chart for exposing services through Istio ambient mesh using Gateway API resources. Renders ListenerSet, HTTPRoute, and AuthorizationPolicy resources from values. The chart renders nothing by default; resources are created only when explicitly configured.
 
 **Homepage:** <https://github.com/KvalitetsIT>
