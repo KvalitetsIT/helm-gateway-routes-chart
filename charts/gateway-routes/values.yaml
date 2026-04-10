@@ -1,0 +1,14 @@
+# -- Default values shared across all routes.
+# Individual routes can override any of these.
+defaults:
+  # -- Default gateway to attach ListenerSets to.
+  gateway:
+    name: ingressgateway
+    namespace: istio-ingress
+  # -- Default cert-manager cluster issuer for TLS certificates.
+  clusterIssuer: letsencrypt-prod-istio
+
+# -- Map of routes to render.
+# Each key becomes the name of the ListenerSet and HTTPRoute.
+# The chart renders nothing by default; routes are created only when explicitly configured.
+routes: {}

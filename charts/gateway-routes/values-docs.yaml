@@ -1,0 +1,211 @@
+# -- Default values shared across all routes.
+# @section -- Defaults
+defaults:
+
+  # -- Default gateway to attach ListenerSets to.
+  # @section -- Defaults
+  gateway:
+    # -- Gateway name.
+    # @default -- "ingressgateway"
+    # @section -- Defaults
+    name: ingressgateway
+    # -- Gateway namespace.
+    # @default -- "istio-ingress"
+    # @section -- Defaults
+    namespace: istio-ingress
+
+  # -- Default cert-manager cluster issuer for TLS certificates.
+  # @default -- "letsencrypt-prod-istio"
+  # @section -- Defaults
+  clusterIssuer: letsencrypt-prod-istio
+
+# -- Map of routes to render.
+# Each top-level key becomes the name of the ListenerSet and HTTPRoute.
+# See [Examples](#examples) for usage.
+# @default -- {}
+# @section -- Routes
+routes:
+
+  '\<name>':
+
+    metadata:
+      # -- Optional. Override the rendered resource name.
+      # @default -- ""
+      # @section -- Routes
+      name: <override-name>
+
+      # -- Optional. Override the rendered resource namespace.
+      # @default -- ""
+      # @section -- Routes
+      namespace: <override-namespace>
+
+      # -- Optional. Additional labels merged with common labels on all resources for this route.
+      # @default -- {}
+      # @section -- Routes
+      labels:
+        <label-key>: <label-value>
+
+      # -- Optional. Annotations added to all resources for this route.
+      # The cert-manager.io/cluster-issuer annotation is managed via clusterIssuer.
+      # @default -- {}
+      # @section -- Routes
+      annotations:
+        <annotation-key>: <annotation-value>
+
+    # -- Optional. Override the default gateway for this route.
+    # @section -- Routes
+    gateway:
+      name: ingressgateway
+      namespace: istio-ingress
+      # -- Optional. Gateway listener section name.
+      # When set, the ListenerSet is skipped and the HTTPRoute attaches directly
+      # to the named Gateway listener section. Use this when a listener is managed
+      # on the Gateway itself rather than via a per-tenant ListenerSet.
+      # @default -- ""
+      # @section -- Routes
+      sectionName: ""
+
+    # -- Optional. Override the default cert-manager cluster issuer for this route.
+    # @section -- Routes
+    clusterIssuer: letsencrypt-prod-istio
+
+    # -- Optional. Listener overrides for the ListenerSet.
+    # Hostnames always come from `httpRoute.hostnames` — one listener is rendered per hostname.
+    # When `listeners` has fewer entries than hostnames, the first entry is used as a template
+    # for remaining hostnames. When omitted entirely, HTTPS with all defaults is used.
+    # Use explicit listeners only when you need non-default protocol, port, or TLS settings.
+    # @default -- auto-generated from httpRoute.hostnames with HTTPS defaults
+    # @section -- Routes
+    listeners:
+      - # -- Optional. Listener name. Must be unique within the ListenerSet.
+        # @default -- "https" / "http" based on protocol; "https-N" / "http-N" for additional listeners
+        # @section -- Routes
+        name: https
+        # -- Optional. Protocol. HTTPS or HTTP.
+        # @default -- "HTTPS"
+        # @section -- Routes
+        protocol: HTTPS
+        # -- Optional. Port.
+        # @default -- 443 for HTTPS/TLS, 80 for HTTP
+        # @section -- Routes
+        port: 443
+        # -- Optional. TLS configuration.
+        # Defaults to Terminate mode with a Secret named after the hostname,
+        # managed by cert-manager via the clusterIssuer default.
+        # @section -- Routes
+        tls:
+          # -- Optional. TLS mode.
+          # @default -- "Terminate"
+          # @section -- Routes
+          mode: Terminate
+          # -- Optional. Override the certificate reference.
+          # When set, the cert-manager.io/cluster-issuer annotation is omitted.
+          # Use this to reference a certificate Secret managed outside the chart.
+          # Requires a ReferenceGrant in the target namespace if the secret
+          # is in a different namespace than the ListenerSet.
+          # @default -- Secret named after the listener hostname in the route namespace
+          # @section -- Routes
+          certificateRef:
+            # -- Required when certificateRef is set. Secret name.
+            # @section -- Routes
+            name: shared-cert
+            # -- Required when certificateRef is set. Secret namespace.
+            # @section -- Routes
+            namespace: istio-ingress
+
+    # -- Required. HTTPRoute configuration.
+    # @section -- Routes
+    httpRoute:
+
+      # -- Optional. Hostnames for the HTTPRoute and auto-generated ListenerSet listeners.
+      # When `listeners` is omitted, one HTTPS listener is auto-generated per hostname here.
+      # When `listeners` is set, this field is unused for the ListenerSet — hostnames are
+      # collected from the listener entries instead.
+      # Required when `gateway.sectionName` is set (no ListenerSet rendered).
+      # @default -- collected from listeners[].hostname
+      # @section -- Routes
+      hostnames:
+        - myapp.example.com
+        - new-myapp.example.com
+
+      # -- Required. Routing rules.
+      # @section -- Routes
+      rules:
+        - # -- Optional. Match conditions (path, headers, method).
+          # If omitted, the rule matches all requests.
+          # @section -- Routes
+          matches:
+            - path:
+                type: PathPrefix
+                value: /
+
+          # -- Optional. Filters to apply (URLRewrite, RequestRedirect, RequestHeaderModifier).
+          # @section -- Routes
+          filters:
+            - type: URLRewrite
+              urlRewrite:
+                path:
+                  type: ReplacePrefixMatch
+                  replacePrefixMatch: /
+
+          # -- Required. Backend services to forward matched requests to.
+          # @section -- Routes
+          backendRefs:
+            - # -- Required. Service name.
+              # @section -- Routes
+              name: my-service
+              # -- Required. Service port.
+              # @section -- Routes
+              port: 80
+              # -- Optional. Traffic weight (0-100). Used for traffic splitting.
+              # @default -- ""
+              # @section -- Routes
+              weight: 100
+
+    # -- Optional. Map of AuthorizationPolicy resources for this route.
+    # Each key becomes part of the policy name: <route-name>-<key>.
+    # @default -- {}
+    # @section -- Routes
+    authorizationPolicies:
+
+      '\<policy-name>':
+
+        metadata:
+          # -- Optional. Override the rendered AuthorizationPolicy name.
+          # @default -- "<route-name>-<policy-name>"
+          # @section -- Routes
+          name: <override-name>
+
+          # -- Optional. Additional labels for this AuthorizationPolicy.
+          # @default -- {}
+          # @section -- Routes
+          labels:
+            <label-key>: <label-value>
+
+          # -- Optional. Annotations for this AuthorizationPolicy.
+          # @default -- {}
+          # @section -- Routes
+          annotations:
+            <annotation-key>: <annotation-value>
+
+        # -- Optional. Target refs for the policy.
+        # Defaults to the first backendRef service if not set.
+        # kind defaults to "Service", group defaults to "".
+        # @section -- Routes
+        targetRefs:
+          - name: my-service
+            kind: Service
+            group: ""
+
+        # -- Optional. Policy action.
+        # @default -- "DENY"
+        # @section -- Routes
+        action: DENY
+
+        # -- Required. Authorization rules.
+        # @section -- Routes
+        rules:
+          - from:
+              - source:
+                  notRemoteIpBlocks:
+                    - "1.2.3.4/32"

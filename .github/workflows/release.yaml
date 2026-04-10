@@ -1,0 +1,110 @@
+name: RELEASE
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions: {}
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        name: "Setup Helm"
+        with:
+          version: "v3.17.0"
+
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set chart version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          sed -i "s/^version: .*/version: ${VERSION}/g" charts/gateway-routes/Chart.yaml
+          sed -i "s/^appVersion: .*/appVersion: \"${VERSION}\"/g" charts/gateway-routes/Chart.yaml
+
+      - name: Build Chart
+        run: |
+          helm package charts/gateway-routes
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "Github Actions"
+          git config --global user.email "development@kvalitetsit.dk"
+
+      - name: Resolve Co-Authors
+        id: coauthors
+        run: |
+          set -euo pipefail
+
+          coauthors_file="$(mktemp)"
+          author_line="$(git show -s --format='Co-Authored-By: %an <%ae>' "${GITHUB_SHA}^{commit}")"
+
+          {
+            printf '%s\n' "${author_line}"
+            git show -s --format=%B "${GITHUB_SHA}^{commit}" \
+              | git interpret-trailers --parse
+          } \
+            | awk '/^Co-Authored-By: / && $0 ~ /^Co-Authored-By: [^[:cntrl:]<>]+ <[^[:cntrl:]<>[:space:]]+>$/ { print }' \
+            | awk '!seen[$0]++' \
+            > "${coauthors_file}"
+
+          {
+            echo 'value<<EOF'
+            cat "${coauthors_file}"
+            echo 'EOF'
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout Helm repo
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          repository: KvalitetsIT/helm-repo
+          token: ${{ secrets.KIT_GITHUB_ACCESS }}
+          path: helm-repo
+
+      - name: Publish chart
+        env:
+          TAG: ${{ steps.version.outputs.version }}
+          CO_AUTHORED_BY: ${{ steps.coauthors.outputs.value }}
+        run: |
+          mkdir -p helm-repo/gateway-routes
+          cp gateway-routes-*.tgz helm-repo/gateway-routes/
+          cd helm-repo
+          helm repo index . --url https://raw.githubusercontent.com/KvalitetsIT/helm-repo/master/
+          git add -A
+
+          {
+            printf 'chore: publish gateway-routes chart %s\n' "$TAG"
+            printf '\n'
+            if [[ -n "${CO_AUTHORED_BY}" ]]; then
+              printf '%s\n' "${CO_AUTHORED_BY}"
+            fi
+          } | git commit -F - || exit 0
+          git push
+
+  github-release:
+    needs:
+      - helm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe # v2.4.2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

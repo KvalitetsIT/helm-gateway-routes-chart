@@ -1,0 +1,80 @@
+{{ template "chart.header" . }}
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.badgesSection" . }}
+
+{{ template "chart.description" . }}
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}
+
+## Hostname resolution
+
+Hostnames are always defined in `httpRoute.hostnames` — they flow to both the `ListenerSet` and `HTTPRoute`.
+The `listeners` field controls only protocol, port, and TLS settings — never hostnames.
+
+| Configuration | ListenerSet listeners | HTTPRoute hostnames |
+|---|---|---|
+| No `listeners` | One HTTPS listener auto-generated per hostname | From `httpRoute.hostnames` |
+| `listeners` with one entry | That entry used as a template for all hostnames | From `httpRoute.hostnames` |
+| `listeners` with N entries | Entries matched 1:1 to hostnames; first entry used as template for any extras | From `httpRoute.hostnames` |
+| `gateway.sectionName` set | No ListenerSet rendered | From `httpRoute.hostnames` |
+
+## Examples
+
+Each `routes` entry renders a `ListenerSet`, an `HTTPRoute`, and optionally one or more `AuthorizationPolicy` resources.
+By default, the chart renders nothing — routes are created only when explicitly configured.
+
+### Simple route
+
+Forward all traffic for a hostname to a backend service.
+Hostname is defined once in `httpRoute.hostnames` — the HTTPS listener is auto-generated.
+
+```yaml
+{{ .Files.Get "ci/simple-values.yaml" -}}
+```
+
+### HTTP route
+
+Expose a service over plain HTTP. Explicit `listeners` are required to override the default HTTPS protocol.
+
+```yaml
+{{ .Files.Get "ci/http-values.yaml" -}}
+```
+
+### IP allowlist
+
+Deny all traffic not originating from the specified IP ranges using an `AuthorizationPolicy`.
+
+```yaml
+{{ .Files.Get "ci/authorization-policy-values.yaml" -}}
+```
+
+### Shared Gateway listener
+
+Attach the HTTPRoute directly to an existing listener on the Gateway (e.g. a shared HTTPS listener
+with a certificate managed centrally). Setting `gateway.sectionName` skips the ListenerSet entirely —
+no ListenerSet is rendered and no cert-manager annotation is added.
+`httpRoute.hostnames` is required since there are no listeners to collect from.
+
+```yaml
+{{ .Files.Get "ci/wildcard-cert-values.yaml" -}}
+```
+
+### Path rewrite
+
+Strip a path prefix before forwarding to the backend.
+Useful when the application is mounted at `/` but exposed at a subpath.
+
+```yaml
+{{ .Files.Get "ci/path-rewrite-values.yaml" -}}
+```
+
+{{ template "helm-docs.versionFooter" . }}

@@ -1,0 +1,39 @@
+{{- range $name, $route := .Values.routes }}
+{{- if $route }}
+{{- range $policyName, $policy := $route.authorizationPolicies }}
+{{- if $policy }}
+{{- $routeNamespace := (default dict $route.metadata).namespace | default $.Release.Namespace }}
+{{- $metadata := (include "common.metadata" (dict "root" $ "metadata" (default dict $policy.metadata) "name" (printf "%s-%s" $name $policyName) "namespace" $routeNamespace) | fromYaml) }}
+{{- $defaultService := $route.httpRoute.rules | first | dig "backendRefs" (list (dict "name" "")) | first | dig "name" "" }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ $metadata.name | quote }}
+  namespace: {{ $metadata.namespace | quote }}
+  labels:
+    {{- toYaml $metadata.labels | nindent 4 }}
+  {{- with $metadata.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  targetRefs:
+    {{- if $policy.targetRefs }}
+    {{- range $policy.targetRefs }}
+    - name: {{ required (printf "routes.%s.authorizationPolicies.%s: targetRef.name is required" $name $policyName) .name | quote }}
+      kind: {{ .kind | default "Service" | quote }}
+      group: {{ .group | default "" | quote }}
+    {{- end }}
+    {{- else }}
+    - name: {{ required (printf "routes.%s.authorizationPolicies.%s: backendRef.name is required when targetRefs not set" $name $policyName) $defaultService | quote }}
+      kind: "Service"
+      group: ""
+    {{- end }}
+  action: {{ $policy.action | default "DENY" | quote }}
+  rules:
+    {{- toYaml $policy.rules | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

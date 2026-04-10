@@ -1,0 +1,17 @@
+apiVersion: v2
+type: application
+name: gateway-routes
+version: 0.0.0
+appVersion: 0.0.0
+description: >
+  Helm chart for exposing services through Istio ambient mesh using Gateway API resources.
+  Renders ListenerSet, HTTPRoute, and AuthorizationPolicy resources from values.
+  The chart renders nothing by default; resources are created only when explicitly configured.
+home: https://github.com/KvalitetsIT
+icon: https://raw.githubusercontent.com/KvalitetsIT/.github/refs/heads/main/assets/favicon.png
+sources:
+  - https://github.com/KvalitetsIT/helm-gateway-routes-chart
+maintainers:
+  - name: KvalitetsIT
+    email: kithosting@kvalitetsit.dk
+    url: https://github.com/KvalitetsIT/helm-repo

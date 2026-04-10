@@ -1,0 +1,10 @@
+routes:
+  myapp:
+    gateway:
+      sectionName: https
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - backendRefs:
+            - name: myapp
