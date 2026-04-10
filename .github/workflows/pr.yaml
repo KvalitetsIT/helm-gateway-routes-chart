@@ -85,11 +85,13 @@ jobs:
               || kubectl wait --for=condition=Established --timeout=60s "crd/${crd}"
           }
 
-          kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.5.1/standard-install.yaml
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/refs/tags/v1.5.1/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
           wait_for_crd httproutes.gateway.networking.k8s.io
+
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/refs/tags/v1.5.1/config/crd/standard/gateway.networking.k8s.io_listenersets.yaml
           wait_for_crd listenersets.gateway.networking.k8s.io
 
-          kubectl apply -f https://github.com/istio/istio/blob/1.29.1/manifests/charts/base/files/crd-all.gen.yaml
+          kubectl apply -f https://raw.githubusercontent.com/istio/istio/1.29.1/manifests/charts/base/files/crd-all.gen.yaml
           wait_for_crd authorizationpolicies.security.istio.io
 
       - name: Run chart-testing (install)
