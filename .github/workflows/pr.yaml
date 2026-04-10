@@ -94,6 +94,11 @@ jobs:
           kubectl apply -f https://raw.githubusercontent.com/istio/istio/1.29.1/manifests/charts/base/files/crd-all.gen.yaml
           wait_for_crd authorizationpolicies.security.istio.io
 
+      - name: Ensure required resources is created
+        if: steps.list-changed.outputs.changed == 'true'
+        run: |
+          kubectl create namespace myns || true
+
       - name: Run chart-testing (install)
         if: steps.list-changed.outputs.changed == 'true'
         run: |
