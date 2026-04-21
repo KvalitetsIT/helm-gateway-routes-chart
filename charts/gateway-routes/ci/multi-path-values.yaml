@@ -8,12 +8,13 @@ routes:
             - path:
                 type: PathPrefix
                 value: /api
-          filters:
-            - type: URLRewrite
-              urlRewrite:
-                path:
-                  type: ReplacePrefixMatch
-                  replacePrefixMatch: /
           backendRefs:
-            - name: myapp
+            - name: myapp-api
               port: 8080
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /
+          backendRefs:
+            - name: myapp-frontend
+              port: 80

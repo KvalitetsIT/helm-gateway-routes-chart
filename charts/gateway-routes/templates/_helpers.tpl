@@ -23,7 +23,7 @@ Used to determine whether to add the cert-manager.io/cluster-issuer annotation.
 */}}
 {{- define "route.hasCertManagerTLS" -}}
 {{- $listeners := .route.listeners | default list -}}
-{{- range $i := until (len (.route.httpRoute.hostnames | default list)) -}}
+{{- range $i := until (len ((default dict .route.httpRoute).hostnames | default list)) -}}
 {{- $l := (include "route.listenerTemplate" (dict "listeners" $listeners "index" $i) | fromYaml | default dict) -}}
 {{- if and (has ($l.protocol | default "HTTPS") (list "HTTPS" "TLS")) (not (default dict $l.tls).certificateRef) -}}
 {{- "true" -}}
@@ -33,14 +33,18 @@ Used to determine whether to add the cert-manager.io/cluster-issuer annotation.
 
 {{/*
 Renders a single ListenerSet listener entry for a given hostname and index.
-Usage: include "route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $namespace)
+Pass passthrough=true to render a TLS Passthrough listener (for TLSRoute).
+Usage: include "route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $namespace "passthrough" false)
 */}}
 {{- define "route.listener" -}}
 {{- $l := (include "route.listenerTemplate" (dict "listeners" .listeners "index" .index) | fromYaml | default dict) -}}
-{{- $protocol := $l.protocol | default "HTTPS" -}}
+{{- $passthrough := .passthrough | default false -}}
+{{- $protocol := $l.protocol | default (ternary "TLS" "HTTPS" $passthrough) -}}
 {{- $isTLS := has $protocol (list "HTTPS" "TLS") -}}
 {{- $tlsCfg := default dict $l.tls -}}
-{{- $baseName := ternary "https" "http" $isTLS -}}
+{{- $mode := $tlsCfg.mode | default (ternary "Passthrough" "Terminate" $passthrough) -}}
+{{- $isPassthrough := eq $mode "Passthrough" -}}
+{{- $baseName := ternary "tls" (ternary "https" "http" $isTLS) $isPassthrough -}}
 {{- $name := ternary (printf "%s-%d" $baseName .index) $baseName (gt .index 0) -}}
 {{- if and $l.name (lt .index (len .listeners)) -}}{{- $name = $l.name -}}{{- end -}}
 - name: {{ $name | quote }}
@@ -49,7 +53,8 @@ Usage: include "route.listener" (dict "listeners" $listeners "index" $i "hostnam
   port: {{ $l.port | default (ternary 443 80 $isTLS) }}
   {{- if $isTLS }}
   tls:
-    mode: {{ $tlsCfg.mode | default "Terminate" | quote }}
+    mode: {{ $mode | quote }}
+    {{- if not $isPassthrough }}
     certificateRefs:
       {{- if $tlsCfg.certificateRef }}
       - name: {{ $tlsCfg.certificateRef.name | quote }}
@@ -60,6 +65,7 @@ Usage: include "route.listener" (dict "listeners" $listeners "index" $i "hostnam
         kind: Secret
         namespace: {{ .namespace | quote }}
       {{- end }}
+    {{- end }}
   {{- end }}
 {{- end }}
 

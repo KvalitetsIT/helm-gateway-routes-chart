@@ -6,6 +6,7 @@ routes:
       rules:
         - backendRefs:
             - name: myapp
+              port: 80
     authorizationPolicies:
       ip-allowlist:
         rules:

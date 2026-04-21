@@ -28,8 +28,11 @@ spec:
     group: gateway.networking.k8s.io
   listeners:
     {{- $listeners := $route.listeners | default list }}
-    {{- range $i, $hostname := ($route.httpRoute.hostnames | default list) }}
+    {{- range $i, $hostname := ((default dict $route.httpRoute).hostnames | default list) }}
     {{- include "route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $metadata.namespace) | nindent 4 }}
+    {{- end }}
+    {{- range $i, $hostname := ((default dict $route.tlsRoute).hostnames | default list) }}
+    {{- include "route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $metadata.namespace "passthrough" true) | nindent 4 }}
     {{- end }}
 {{- end }}
 {{- end }}

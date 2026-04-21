@@ -4,7 +4,8 @@
 {{- if $policy }}
 {{- $routeNamespace := (default dict $route.metadata).namespace | default $.Release.Namespace }}
 {{- $metadata := (include "common.metadata" (dict "root" $ "metadata" (default dict $policy.metadata) "name" (printf "%s-%s" $name $policyName) "namespace" $routeNamespace) | fromYaml) }}
-{{- $defaultService := $route.httpRoute.rules | first | dig "backendRefs" (list (dict "name" "")) | first | dig "name" "" }}
+{{- $defaultService := ((default dict $route.httpRoute).rules | default list) | first | default dict | dig "backendRefs" (list (dict "name" "")) | first | dig "name" "" }}
+{{- if and (not $defaultService) $route.service }}{{- $defaultService = printf "%s-mesh" $name }}{{- end }}
 ---
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy

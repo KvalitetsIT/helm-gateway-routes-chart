@@ -1,9 +1,15 @@
+referenceGrant:
+  enabled: true
+
 routes:
   myapp:
+    gateway:
+      name: myapp-gateway
+      sectionName: https
     httpRoute:
       hostnames:
         - myapp.example.com
       rules:
         - backendRefs:
             - name: myapp
-              port: 80
+              port: 8080

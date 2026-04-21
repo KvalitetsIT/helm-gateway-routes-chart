@@ -1,0 +1,23 @@
+routes:
+  myapp:
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - filters:
+            - type: CORS
+              cors:
+                allowOrigins:
+                  - "https://myapp.example.com"
+                allowMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - PATCH
+                  - OPTIONS
+                allowHeaders:
+                  - "*"
+          backendRefs:
+            - name: myapp
+              port: 8080

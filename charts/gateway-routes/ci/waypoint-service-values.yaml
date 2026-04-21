@@ -1,0 +1,10 @@
+routes:
+  myapp:
+    service:
+      selector:
+        app: httpbin
+      ports:
+        - targetPort: 8080
+    httpRoute:
+      hostnames:
+        - myapp.example.com

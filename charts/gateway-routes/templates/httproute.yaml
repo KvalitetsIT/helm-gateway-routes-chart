@@ -33,7 +33,9 @@ spec:
     - {{ . | quote }}
     {{- end }}
   rules:
+    {{- if $route.httpRoute.rules }}
     {{- range $route.httpRoute.rules }}
+    {{- if .backendRefs }}
     - backendRefs:
         {{- range .backendRefs }}
         - name: {{ required (printf "routes.%s: backendRef.name is required" $name) .name | quote }}
@@ -50,6 +52,35 @@ spec:
       filters:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+    {{- else if $route.service }}
+    - backendRefs:
+        - name: {{ printf "%s-mesh" $name | quote }}
+          port: {{ (first $route.service.ports).port | default 80 }}
+      {{- with .matches }}
+      matches:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .filters }}
+      filters:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- else if .filters }}
+    - filters:
+        {{- toYaml .filters | nindent 8 }}
+      {{- with .matches }}
+      matches:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- else }}
+    {{- fail (printf "routes.%s: backendRefs is required when service is not defined" $name) }}
+    {{- end }}
+    {{- end }}
+    {{- else if $route.service }}
+    - backendRefs:
+        - name: {{ printf "%s-mesh" $name | quote }}
+          port: {{ (first $route.service.ports).port | default 80 }}
+    {{- else }}
+    {{- fail (printf "routes.%s: httpRoute.rules is required when service is not defined" $name) }}
     {{- end }}
 {{- end }}
 {{- end }}

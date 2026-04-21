@@ -1,0 +1,16 @@
+{{- if .Values.referenceGrant.enabled }}
+{{- $gatewayNamespace := .Values.referenceGrant.gatewayNamespace }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ReferenceGrant
+metadata:
+  {{- include "common.metadata" (dict "root" $ "metadata" (dict) "name" (printf "%s-gateway" .Release.Name) "namespace" .Release.Namespace) | nindent 2 }}
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: {{ $gatewayNamespace | quote }}
+  to:
+    - group: ""
+      kind: ConfigMap
+{{- end }}

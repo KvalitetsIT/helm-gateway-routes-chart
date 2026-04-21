@@ -1,0 +1,23 @@
+routes:
+  myapp:
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - matches:
+            - path:
+                type: Exact
+                value: /
+          filters:
+            - type: RequestRedirect
+              requestRedirect:
+                path:
+                  type: ReplaceFullPath
+                  replaceFullPath: /app
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /app
+          backendRefs:
+            - name: myapp
+              port: 8080

@@ -1,0 +1,19 @@
+routes:
+  myapp:
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - filters:
+            - type: ResponseHeaderModifier
+              responseHeaderModifier:
+                set:
+                  - name: X-Frame-Options
+                    value: SAMEORIGIN
+                  - name: X-Content-Type-Options
+                    value: nosniff
+                  - name: Strict-Transport-Security
+                    value: max-age=31536000; includeSubDomains
+          backendRefs:
+            - name: myapp
+              port: 80

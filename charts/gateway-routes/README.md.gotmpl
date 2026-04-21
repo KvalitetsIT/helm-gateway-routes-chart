@@ -25,15 +25,35 @@ The `listeners` field controls only protocol, port, and TLS settings — never h
 | `listeners` with N entries | Entries matched 1:1 to hostnames; first entry used as template for any extras | From `httpRoute.hostnames` |
 | `gateway.sectionName` set | No ListenerSet rendered | From `httpRoute.hostnames` |
 
+## nginx-ingress annotation migration
+
+| nginx annotation | Equivalent |
+|---|---|
+| _(none)_ | [Simple HTTPS route](#simple-https-route) |
+| `nginx.ingress.kubernetes.io/backend-protocol: HTTP` | No action needed — Envoy always uses HTTP to the backend |
+| `nginx.ingress.kubernetes.io/force-ssl-redirect: "true"` | No action needed — the ListenerSet only exposes port 443 |
+| `nginx.ingress.kubernetes.io/rewrite-target` + `nginx.ingress.kubernetes.io/use-regex` | [Path rewrite](#path-rewrite) |
+| `nginx.ingress.kubernetes.io/app-root` | [App-root redirect](#app-root-redirect) |
+| `nginx.ingress.kubernetes.io/whitelist-source-range` | [IP allowlist](#ip-allowlist) |
+| `nginx.ingress.kubernetes.io/enable-cors` / `nginx.ingress.kubernetes.io/cors-allow-*` | [CORS](#cors) |
+| `nginx.ingress.kubernetes.io/ssl-passthrough` | [SSL passthrough](#ssl-passthrough) |
+| `nginx.ingress.kubernetes.io/auth-tls-verify-client` / `nginx.ingress.kubernetes.io/auth-tls-secret` | [Client certificate authentication](#client-certificate-authentication) |
+| `nginx.ingress.kubernetes.io/auth-tls-pass-certificate-to-upstream` | Handled automatically — `x-forwarded-client-cert` is forwarded to the backend via a global EnvoyFilter |
+| `nginx.ingress.kubernetes.io/proxy-body-size` | No action needed — Envoy streams request bodies without buffering |
+| `nginx.ingress.kubernetes.io/proxy-buffer-size` / `nginx.ingress.kubernetes.io/proxy-buffers-number` | No action needed — Envoy streams, no buffering |
+| `nginx.ingress.kubernetes.io/large-client-header-buffers` | No action needed — Envoy default header limit is 60 KB (nginx is 32 KB) |
+| `nginx.ingress.kubernetes.io/server-snippet` (block path) | [Block paths](#block-paths) |
+| `nginx.ingress.kubernetes.io/configuration-snippet: more_set_headers` | [Response headers](#response-headers) |
+
 ## Examples
 
 Each `routes` entry renders a `ListenerSet`, an `HTTPRoute`, and optionally one or more `AuthorizationPolicy` resources.
 By default, the chart renders nothing — routes are created only when explicitly configured.
 
-### Simple route
+### Simple HTTPS route
 
-Forward all traffic for a hostname to a backend service.
-Hostname is defined once in `httpRoute.hostnames` — the HTTPS listener is auto-generated.
+Forward all traffic for a hostname to a backend service over HTTPS.
+cert-manager provisions the TLS certificate automatically.
 
 ```yaml
 {{ .Files.Get "ci/simple-values.yaml" -}}
@@ -41,38 +61,118 @@ Hostname is defined once in `httpRoute.hostnames` — the HTTPS listener is auto
 
 ### HTTP route
 
-Expose a service over plain HTTP. Explicit `listeners` are required to override the default HTTPS protocol.
+Expose a service over plain HTTP.
 
 ```yaml
 {{ .Files.Get "ci/http-values.yaml" -}}
 ```
 
-### IP allowlist
+### Path rewrite
 
-Deny all traffic not originating from the specified IP ranges using an `AuthorizationPolicy`.
+Strip a path prefix before forwarding to the backend.
 
 ```yaml
-{{ .Files.Get "ci/authorization-policy-values.yaml" -}}
+{{ .Files.Get "ci/path-rewrite-values.yaml" -}}
+```
+
+### App-root redirect
+
+Redirect requests to `/` to a specific path, then forward all traffic under that path to the backend.
+
+```yaml
+{{ .Files.Get "ci/app-root-redirect-values.yaml" -}}
+```
+
+### IP allowlist
+
+Deny all traffic not originating from the specified IP ranges.
+
+```yaml
+{{ .Files.Get "ci/ip-allowlist-values.yaml" -}}
+```
+
+### CORS
+
+Add CORS headers to responses.
+
+```yaml
+{{ .Files.Get "ci/cors-values.yaml" -}}
+```
+
+### SSL passthrough
+
+Forward the raw TLS stream to the backend without terminating TLS at the gateway.
+cert-manager is not involved — the backend manages its own certificate.
+
+```yaml
+{{ .Files.Get "ci/ssl-passthrough-values.yaml" -}}
+```
+
+### Multiple paths on a single hostname
+
+Route different paths to different backend services under one hostname.
+
+```yaml
+{{ .Files.Get "ci/multi-path-values.yaml" -}}
 ```
 
 ### Shared Gateway listener
 
-Attach the HTTPRoute directly to an existing listener on the Gateway (e.g. a shared HTTPS listener
-with a certificate managed centrally). Setting `gateway.sectionName` skips the ListenerSet entirely —
-no ListenerSet is rendered and no cert-manager annotation is added.
-`httpRoute.hostnames` is required since there are no listeners to collect from.
+Attach the HTTPRoute directly to an existing listener on a centrally managed Gateway.
+Setting `gateway.sectionName` skips the ListenerSet entirely — no cert-manager annotation is added.
 
 ```yaml
-{{ .Files.Get "ci/wildcard-cert-values.yaml" -}}
+{{ .Files.Get "ci/shared-gateway-values.yaml" -}}
 ```
 
-### Path rewrite
+### Client certificate authentication
 
-Strip a path prefix before forwarding to the backend.
-Useful when the application is mounted at `/` but exposed at a subpath.
+Verify an external client certificate at the ingressgateway. Requires an admin to create a dedicated
+Gateway resource in `istio-ingress` (e.g. `myapp-gateway`) that attaches to the shared ingressgateway
+deployment via `addresses[].value: ingressgateway-istio.istio-ingress.svc.cluster.local`. The dedicated
+Gateway adds its own listener alongside the shared ingressgateway listeners.
+
+The Gateway must reference a CA ConfigMap in the tenant namespace via
+`spec.tls.frontend.default.validation.caCertificateRefs`. The ConfigMap must have a `ca.crt` key
+containing the PEM-encoded CA certificate. The CA ConfigMap and the Gateway are not managed by this chart.
+
+Enable `referenceGrant` to allow the Gateway in `istio-ingress` to read the CA ConfigMap cross-namespace.
+Set `gateway.name` to the dedicated Gateway name and `gateway.sectionName` to the listener name on that Gateway.
+
+The `x-forwarded-client-cert` header is forwarded to the backend automatically via a global EnvoyFilter.
+The `ssl-client-cert` header (nginx compat) is available via a per-namespace Lua EnvoyFilter.
 
 ```yaml
-{{ .Files.Get "ci/path-rewrite-values.yaml" -}}
+{{ .Files.Get "ci/mtls-client-cert-values.yaml" -}}
+```
+
+### Waypoint service
+
+Route ingressgateway traffic through a waypoint proxy for L7 policy enforcement without affecting
+east-west pod-to-pod traffic. The chart creates a `<route-name>-mesh` Service with the required
+Istio waypoint labels. `httpRoute.rules` defaults to a single catch-all rule pointing to
+`<route-name>-mesh` when `service` is defined and no explicit rules are given.
+
+```yaml
+{{ .Files.Get "ci/waypoint-service-values.yaml" -}}
+```
+
+### Block paths
+
+Deny requests to specific paths using an `AuthorizationPolicy` DENY rule.
+Requires a waypoint in the traffic path for L7 policy enforcement — use the `service` field
+to route through the waypoint, or deploy a namespace-level waypoint separately.
+
+```yaml
+{{ .Files.Get "ci/block-paths-values.yaml" -}}
+```
+
+### Response headers
+
+Add or override response headers using the `ResponseHeaderModifier` filter.
+
+```yaml
+{{ .Files.Get "ci/response-headers-values.yaml" -}}
 ```
 
 {{ template "helm-docs.versionFooter" . }}
