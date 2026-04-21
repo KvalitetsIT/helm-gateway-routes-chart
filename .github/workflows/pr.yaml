@@ -91,6 +91,9 @@ jobs:
           kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/refs/tags/v1.5.1/config/crd/standard/gateway.networking.k8s.io_listenersets.yaml
           wait_for_crd listenersets.gateway.networking.k8s.io
 
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/refs/tags/v1.5.1/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml
+          wait_for_crd referencegrants.gateway.networking.k8s.io
+
           kubectl apply -f https://raw.githubusercontent.com/istio/istio/1.29.1/manifests/charts/base/files/crd-all.gen.yaml
           wait_for_crd authorizationpolicies.security.istio.io
 
