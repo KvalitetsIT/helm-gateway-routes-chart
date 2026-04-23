@@ -1,0 +1,34 @@
+{{- range $name, $route := .Values.routes }}
+{{- if $route }}
+{{- if $route.service }}
+{{- $meta := (include "route.metadata" (dict "root" $ "route" $route "name" $name) | fromYaml) }}
+{{- $svcName := printf "%s-mesh" $meta.name }}
+{{- $waypoint := $route.service.waypoint | default "waypoint" }}
+{{- $selector := required (printf "routes.%s.service.selector is required" $name) $route.service.selector }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svcName | quote }}
+  namespace: {{ $meta.namespace | quote }}
+  labels:
+    {{- toYaml $meta.labels | nindent 4 }}
+    istio.io/use-waypoint: {{ $waypoint | quote }}
+    istio.io/ingress-use-waypoint: "true"
+  {{- with $meta.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    {{- toYaml $selector | nindent 4 }}
+  ports:
+    {{- range $i, $p := $route.service.ports }}
+    - name: {{ $p.name | default (ternary "http" (printf "http-%d" $i) (eq $i 0)) | quote }}
+      port: {{ $p.port | default 80 }}
+      targetPort: {{ required (printf "routes.%s.service.ports[%d].targetPort is required" $name $i) $p.targetPort }}
+      protocol: {{ $p.protocol | default "TCP" | quote }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

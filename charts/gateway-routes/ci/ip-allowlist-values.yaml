@@ -1,0 +1,17 @@
+routes:
+  myapp:
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - backendRefs:
+            - name: myapp
+              port: 80
+    authorizationPolicies:
+      ip-allowlist:
+        rules:
+          - from:
+              - source:
+                  notRemoteIpBlocks:
+                    - "1.2.3.4/32"
+                    - "10.0.0.0/8"

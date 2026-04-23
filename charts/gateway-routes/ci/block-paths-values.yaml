@@ -1,0 +1,19 @@
+routes:
+  myapp:
+    service:
+      selector:
+        app: myapp
+      ports:
+        - targetPort: 8080
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+    authorizationPolicies:
+      block-paths:
+        action: DENY
+        rules:
+          - to:
+              - operation:
+                  paths:
+                    - /metrics
+                    - /auth/metrics

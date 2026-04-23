@@ -1,0 +1,20 @@
+routes:
+  myapp:
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /api
+          backendRefs:
+            - name: myapp-api
+              port: 8080
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /
+          backendRefs:
+            - name: myapp-frontend
+              port: 80

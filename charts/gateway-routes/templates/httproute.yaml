@@ -1,0 +1,87 @@
+{{- range $name, $route := .Values.routes }}
+{{- if $route }}
+{{- if $route.httpRoute }}
+{{- $metadata := (include "route.metadata" (dict "root" $ "route" $route "name" $name) | fromYaml) }}
+{{- $gateway := (include "route.gateway" (dict "route" $route "root" $) | fromYaml) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $metadata.name | quote }}
+  namespace: {{ $metadata.namespace | quote }}
+  labels:
+    {{- toYaml $metadata.labels | nindent 4 }}
+  {{- with $metadata.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- if $gateway.sectionName }}
+    - name: {{ $gateway.name | quote }}
+      namespace: {{ $gateway.namespace | quote }}
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      sectionName: {{ $gateway.sectionName | quote }}
+    {{- else }}
+    - name: {{ $metadata.name | quote }}
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+    {{- end }}
+  hostnames:
+    {{- range ($route.httpRoute.hostnames | default list) }}
+    - {{ . | quote }}
+    {{- end }}
+  rules:
+    {{- if $route.httpRoute.rules }}
+    {{- range $route.httpRoute.rules }}
+    {{- if .backendRefs }}
+    - backendRefs:
+        {{- range .backendRefs }}
+        - name: {{ required (printf "routes.%s: backendRef.name is required" $name) .name | quote }}
+          port: {{ .port | default 80 }}
+          {{- with .weight }}
+          weight: {{ . }}
+          {{- end }}
+        {{- end }}
+      {{- with .matches }}
+      matches:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .filters }}
+      filters:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- else if $route.service }}
+    - backendRefs:
+        - name: {{ printf "%s-mesh" $name | quote }}
+          port: {{ (first $route.service.ports).port | default 80 }}
+      {{- with .matches }}
+      matches:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .filters }}
+      filters:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- else if .filters }}
+    - filters:
+        {{- toYaml .filters | nindent 8 }}
+      {{- with .matches }}
+      matches:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- else }}
+    {{- fail (printf "routes.%s: backendRefs is required when service is not defined" $name) }}
+    {{- end }}
+    {{- end }}
+    {{- else if $route.service }}
+    - backendRefs:
+        - name: {{ printf "%s-mesh" $name | quote }}
+          port: {{ (first $route.service.ports).port | default 80 }}
+    {{- else }}
+    {{- fail (printf "routes.%s: httpRoute.rules is required when service is not defined" $name) }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

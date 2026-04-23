@@ -1,0 +1,77 @@
+defaults:
+  gateway:
+    name: ingressgateway
+    namespace: istio-ingress
+  clusterIssuer: letsencrypt-prod-istio
+
+routes:
+  myapp:
+    metadata:
+      name: myapp-override
+      namespace: myns
+      labels:
+        app.kubernetes.io/part-of: myplatform
+      annotations:
+        example.com/owner: platform-team
+
+    gateway:
+      name: ingressgateway
+      namespace: istio-ingress
+
+    clusterIssuer: letsencrypt-prod-istio
+
+    listeners:
+      - name: https
+        protocol: HTTPS
+        port: 443
+        tls:
+          mode: Terminate
+      - name: https-alias
+        protocol: HTTPS
+        port: 443
+        tls:
+          mode: Terminate
+
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+        - myapp-alias.example.com
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /api
+          filters:
+            - type: URLRewrite
+              urlRewrite:
+                path:
+                  type: ReplacePrefixMatch
+                  replacePrefixMatch: /
+          backendRefs:
+            - name: myapp-api
+              port: 8080
+              weight: 100
+        - backendRefs:
+            - name: myapp
+              port: 80
+              weight: 100
+
+    authorizationPolicies:
+      ip-allowlist:
+        metadata:
+          name: myapp-ip-allowlist
+          labels:
+            policy-type: ip-allowlist
+          annotations:
+            example.com/owner: platform-team
+        targetRefs:
+          - name: myapp
+            kind: Service
+            group: ""
+        action: DENY
+        rules:
+          - from:
+              - source:
+                  notRemoteIpBlocks:
+                    - "1.2.3.4/32"
+                    - "10.0.0.0/8"

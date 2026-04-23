@@ -1,0 +1,19 @@
+routes:
+  myapp:
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /api
+          filters:
+            - type: URLRewrite
+              urlRewrite:
+                path:
+                  type: ReplacePrefixMatch
+                  replacePrefixMatch: /
+          backendRefs:
+            - name: myapp
+              port: 8080

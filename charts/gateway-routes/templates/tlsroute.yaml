@@ -1,0 +1,48 @@
+{{- range $name, $route := .Values.routes }}
+{{- if $route }}
+{{- if $route.tlsRoute }}
+{{- $metadata := (include "route.metadata" (dict "root" $ "route" $route "name" $name) | fromYaml) }}
+{{- $gateway := (include "route.gateway" (dict "route" $route "root" $) | fromYaml) }}
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: {{ $metadata.name | quote }}
+  namespace: {{ $metadata.namespace | quote }}
+  labels:
+    {{- toYaml $metadata.labels | nindent 4 }}
+  {{- with $metadata.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- if $gateway.sectionName }}
+    - name: {{ $gateway.name | quote }}
+      namespace: {{ $gateway.namespace | quote }}
+      kind: Gateway
+      group: gateway.networking.k8s.io
+      sectionName: {{ $gateway.sectionName | quote }}
+    {{- else }}
+    - name: {{ $metadata.name | quote }}
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
+    {{- end }}
+  hostnames:
+    {{- range ($route.tlsRoute.hostnames | default list) }}
+    - {{ . | quote }}
+    {{- end }}
+  rules:
+    {{- range $route.tlsRoute.rules }}
+    - backendRefs:
+        {{- range .backendRefs }}
+        - name: {{ required (printf "routes.%s: backendRef.name is required" $name) .name | quote }}
+          port: {{ .port | default 443 }}
+          {{- with .weight }}
+          weight: {{ . }}
+          {{- end }}
+        {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

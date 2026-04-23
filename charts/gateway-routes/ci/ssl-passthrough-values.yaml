@@ -1,0 +1,9 @@
+routes:
+  myapp:
+    tlsRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - backendRefs:
+            - name: myapp
+              port: 8443

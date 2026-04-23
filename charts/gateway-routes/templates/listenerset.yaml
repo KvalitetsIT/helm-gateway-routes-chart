@@ -1,0 +1,39 @@
+{{- range $name, $route := .Values.routes }}
+{{- if $route }}
+{{- $gateway := (include "route.gateway" (dict "route" $route "root" $) | fromYaml) }}
+{{- if not $gateway.sectionName }}
+{{- $clusterIssuer := $route.clusterIssuer | default $.Values.defaults.clusterIssuer }}
+{{- $extraAnnotations := dict }}
+{{- if and $clusterIssuer (include "route.hasCertManagerTLS" (dict "route" $route)) }}
+{{- $_ := set $extraAnnotations "cert-manager.io/cluster-issuer" $clusterIssuer }}
+{{- end }}
+{{- $metadata := (include "route.metadata" (dict "root" $ "route" $route "name" $name "extraAnnotations" $extraAnnotations) | fromYaml) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: {{ $metadata.name | quote }}
+  namespace: {{ $metadata.namespace | quote }}
+  labels:
+    {{- toYaml $metadata.labels | nindent 4 }}
+  {{- with $metadata.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRef:
+    name: {{ $gateway.name | quote }}
+    namespace: {{ $gateway.namespace | quote }}
+    kind: Gateway
+    group: gateway.networking.k8s.io
+  listeners:
+    {{- $listeners := $route.listeners | default list }}
+    {{- range $i, $hostname := ((default dict $route.httpRoute).hostnames | default list) }}
+    {{- include "route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $metadata.namespace) | nindent 4 }}
+    {{- end }}
+    {{- range $i, $hostname := ((default dict $route.tlsRoute).hostnames | default list) }}
+    {{- include "route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $metadata.namespace "passthrough" true) | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
