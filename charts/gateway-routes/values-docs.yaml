@@ -250,8 +250,11 @@ routes:
             group: ""
 
         # -- Optional. Policy action.
+        # Use ALLOW with remoteIpBlocks for an IP allowlist.
+        # Use DENY with notRemoteIpBlocks for a denylist.
+        # Use DENY with to.operation.paths to block specific paths.
         # @section -- Routes
-        action: DENY
+        action: ALLOW
 
         # -- Required. Authorization rules.
         # @default -- []

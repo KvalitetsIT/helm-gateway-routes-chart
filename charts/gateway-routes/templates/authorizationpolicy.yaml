@@ -31,7 +31,7 @@ spec:
       kind: "Service"
       group: ""
     {{- end }}
-  action: {{ $policy.action | default "DENY" | quote }}
+  action: {{ $policy.action | default "ALLOW" | quote }}
   rules:
     {{- toYaml $policy.rules | nindent 4 }}
 {{- end }}
