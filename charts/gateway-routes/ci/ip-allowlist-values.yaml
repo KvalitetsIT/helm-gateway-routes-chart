@@ -9,9 +9,10 @@ routes:
               port: 80
     authorizationPolicies:
       ip-allowlist:
+        action: ALLOW
         rules:
           - from:
               - source:
-                  notRemoteIpBlocks:
+                  remoteIpBlocks:
                     - "1.2.3.4/32"
                     - "10.0.0.0/8"

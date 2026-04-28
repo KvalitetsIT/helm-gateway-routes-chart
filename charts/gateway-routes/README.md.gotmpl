@@ -34,7 +34,7 @@ The `listeners` field controls only protocol, port, and TLS settings — never h
 | `nginx.ingress.kubernetes.io/force-ssl-redirect: "true"` | No action needed — the ListenerSet only exposes port 443 |
 | `nginx.ingress.kubernetes.io/rewrite-target` + `nginx.ingress.kubernetes.io/use-regex` | [Path rewrite](#path-rewrite) |
 | `nginx.ingress.kubernetes.io/app-root` | [App-root redirect](#app-root-redirect) |
-| `nginx.ingress.kubernetes.io/whitelist-source-range` | [IP allowlist](#ip-allowlist) |
+| `nginx.ingress.kubernetes.io/whitelist-source-range` | [IP allowlist](#ip-allowlist) — `ALLOW` + `remoteIpBlocks` |
 | `nginx.ingress.kubernetes.io/enable-cors` / `nginx.ingress.kubernetes.io/cors-allow-*` | [CORS](#cors) |
 | `nginx.ingress.kubernetes.io/ssl-passthrough` | [SSL passthrough](#ssl-passthrough) |
 | `nginx.ingress.kubernetes.io/auth-tls-verify-client` / `nginx.ingress.kubernetes.io/auth-tls-secret` | [Client certificate authentication](#client-certificate-authentication) |

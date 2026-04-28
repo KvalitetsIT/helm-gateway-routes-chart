@@ -77,7 +77,7 @@ Helm chart for exposing services through Istio ambient mesh using Gateway API re
 | routes.\<name>.authorizationPolicies.\<policy-name>.metadata.labels | object | {} | Optional. Additional labels for this AuthorizationPolicy. |
 | routes.\<name>.authorizationPolicies.\<policy-name>.metadata.annotations | object | {} | Optional. Annotations for this AuthorizationPolicy. |
 | routes.\<name>.authorizationPolicies.\<policy-name>.targetRefs | list | [] | Optional. Target refs for the policy. Defaults to the first backendRef service if not set. kind defaults to "Service", group defaults to "". |
-| routes.\<name>.authorizationPolicies.\<policy-name>.action | string | `"DENY"` | Optional. Policy action. |
+| routes.\<name>.authorizationPolicies.\<policy-name>.action | string | `"ALLOW"` | Optional. Policy action. Use ALLOW with remoteIpBlocks for an IP allowlist. Use DENY with notRemoteIpBlocks for a denylist. Use DENY with to.operation.paths to block specific paths. |
 | routes.\<name>.authorizationPolicies.\<policy-name>.rules | list | [] | Required. Authorization rules. |
 
 ## Hostname resolution
@@ -101,7 +101,7 @@ The `listeners` field controls only protocol, port, and TLS settings — never h
 | `nginx.ingress.kubernetes.io/force-ssl-redirect: "true"` | No action needed — the ListenerSet only exposes port 443 |
 | `nginx.ingress.kubernetes.io/rewrite-target` + `nginx.ingress.kubernetes.io/use-regex` | [Path rewrite](#path-rewrite) |
 | `nginx.ingress.kubernetes.io/app-root` | [App-root redirect](#app-root-redirect) |
-| `nginx.ingress.kubernetes.io/whitelist-source-range` | [IP allowlist](#ip-allowlist) |
+| `nginx.ingress.kubernetes.io/whitelist-source-range` | [IP allowlist](#ip-allowlist) — `ALLOW` + `remoteIpBlocks` |
 | `nginx.ingress.kubernetes.io/enable-cors` / `nginx.ingress.kubernetes.io/cors-allow-*` | [CORS](#cors) |
 | `nginx.ingress.kubernetes.io/ssl-passthrough` | [SSL passthrough](#ssl-passthrough) |
 | `nginx.ingress.kubernetes.io/auth-tls-verify-client` / `nginx.ingress.kubernetes.io/auth-tls-secret` | [Client certificate authentication](#client-certificate-authentication) |
@@ -224,10 +224,11 @@ routes:
               port: 80
     authorizationPolicies:
       ip-allowlist:
+        action: ALLOW
         rules:
           - from:
               - source:
-                  notRemoteIpBlocks:
+                  remoteIpBlocks:
                     - "1.2.3.4/32"
                     - "10.0.0.0/8"
 ```
