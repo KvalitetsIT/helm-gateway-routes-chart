@@ -3,7 +3,7 @@
 {{- range $policyName, $policy := $route.authorizationPolicies }}
 {{- if $policy }}
 {{- $routeNamespace := (default dict $route.metadata).namespace | default $.Release.Namespace }}
-{{- $metadata := (include "common.metadata" (dict "root" $ "metadata" (default dict $policy.metadata) "name" (printf "%s-%s" $name $policyName) "namespace" $routeNamespace) | fromYaml) }}
+{{- $metadata := (include "gateway-routes.metadata" (dict "root" $ "metadata" (default dict $policy.metadata) "name" (printf "%s-%s" $name $policyName) "namespace" $routeNamespace) | fromYaml) }}
 {{- $defaultService := ((default dict $route.httpRoute).rules | default list) | first | default dict | dig "backendRefs" (list (dict "name" "")) | first | dig "name" "" }}
 {{- if and (not $defaultService) $route.service }}{{- $defaultService = printf "%s-mesh" $name }}{{- end }}
 ---

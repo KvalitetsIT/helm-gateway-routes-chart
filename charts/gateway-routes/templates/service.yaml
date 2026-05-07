@@ -1,7 +1,7 @@
 {{- range $name, $route := .Values.routes }}
 {{- if $route }}
 {{- if $route.service }}
-{{- $meta := (include "route.metadata" (dict "root" $ "route" $route "name" $name) | fromYaml) }}
+{{- $meta := (include "gateway-routes.route.metadata" (dict "root" $ "route" $route "name" $name) | fromYaml) }}
 {{- $svcName := printf "%s-mesh" $meta.name }}
 {{- $waypoint := $route.service.waypoint | default "waypoint" }}
 {{- $selector := required (printf "routes.%s.service.selector is required" $name) $route.service.selector }}

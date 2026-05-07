@@ -1,8 +1,8 @@
 {{- range $name, $route := .Values.routes }}
 {{- if $route }}
 {{- if $route.tlsRoute }}
-{{- $metadata := (include "route.metadata" (dict "root" $ "route" $route "name" $name) | fromYaml) }}
-{{- $gateway := (include "route.gateway" (dict "route" $route "root" $) | fromYaml) }}
+{{- $metadata := (include "gateway-routes.route.metadata" (dict "root" $ "route" $route "name" $name) | fromYaml) }}
+{{- $gateway := (include "gateway-routes.route.gateway" (dict "route" $route "root" $) | fromYaml) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TLSRoute

@@ -1,13 +1,13 @@
 {{- range $name, $route := .Values.routes }}
 {{- if $route }}
-{{- $gateway := (include "route.gateway" (dict "route" $route "root" $) | fromYaml) }}
+{{- $gateway := (include "gateway-routes.route.gateway" (dict "route" $route "root" $) | fromYaml) }}
 {{- if not $gateway.sectionName }}
 {{- $clusterIssuer := $route.clusterIssuer | default $.Values.defaults.clusterIssuer }}
 {{- $extraAnnotations := dict }}
-{{- if and $clusterIssuer (include "route.hasCertManagerTLS" (dict "route" $route)) }}
+{{- if and $clusterIssuer (include "gateway-routes.route.hasCertManagerTLS" (dict "route" $route)) }}
 {{- $_ := set $extraAnnotations "cert-manager.io/cluster-issuer" $clusterIssuer }}
 {{- end }}
-{{- $metadata := (include "route.metadata" (dict "root" $ "route" $route "name" $name "extraAnnotations" $extraAnnotations) | fromYaml) }}
+{{- $metadata := (include "gateway-routes.route.metadata" (dict "root" $ "route" $route "name" $name "extraAnnotations" $extraAnnotations) | fromYaml) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
@@ -29,10 +29,10 @@ spec:
   listeners:
     {{- $listeners := $route.listeners | default list }}
     {{- range $i, $hostname := ((default dict $route.httpRoute).hostnames | default list) }}
-    {{- include "route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $metadata.namespace) | nindent 4 }}
+    {{- include "gateway-routes.route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $metadata.namespace) | nindent 4 }}
     {{- end }}
     {{- range $i, $hostname := ((default dict $route.tlsRoute).hostnames | default list) }}
-    {{- include "route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $metadata.namespace "passthrough" true) | nindent 4 }}
+    {{- include "gateway-routes.route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $metadata.namespace "passthrough" true) | nindent 4 }}
     {{- end }}
 {{- end }}
 {{- end }}
