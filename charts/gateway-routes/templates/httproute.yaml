@@ -38,28 +38,39 @@ spec:
     {{- if .backendRefs }}
     - backendRefs:
         {{- range .backendRefs }}
-        - name: {{ required (printf "routes.%s: backendRef.name is required" $name) .name | quote }}
+        - group: ''
+          kind: Service
+          name: {{ required (printf "routes.%s: backendRef.name is required" $name) .name | quote }}
           port: {{ .port | default 80 }}
-          {{- with .weight }}
-          weight: {{ . }}
-          {{- end }}
+          weight: {{ .weight | default 1 }}
         {{- end }}
-      {{- with .matches }}
       matches:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- if .matches }}
+        {{- toYaml .matches | nindent 8 }}
+        {{- else }}
+        - path:
+            type: PathPrefix
+            value: /
+        {{- end }}
       {{- with .filters }}
       filters:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     {{- else if $route.service }}
     - backendRefs:
-        - name: {{ printf "%s-mesh" $name | quote }}
+        - group: ''
+          kind: Service
+          name: {{ printf "%s-mesh" $name | quote }}
           port: {{ (first $route.service.ports).port | default 80 }}
-      {{- with .matches }}
+          weight: 1
       matches:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- if .matches }}
+        {{- toYaml .matches | nindent 8 }}
+        {{- else }}
+        - path:
+            type: PathPrefix
+            value: /
+        {{- end }}
       {{- with .filters }}
       filters:
         {{- toYaml . | nindent 8 }}
@@ -77,8 +88,15 @@ spec:
     {{- end }}
     {{- else if $route.service }}
     - backendRefs:
-        - name: {{ printf "%s-mesh" $name | quote }}
+        - group: ''
+          kind: Service
+          name: {{ printf "%s-mesh" $name | quote }}
           port: {{ (first $route.service.ports).port | default 80 }}
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
     {{- else }}
     {{- fail (printf "routes.%s: httpRoute.rules is required when service is not defined" $name) }}
     {{- end }}
