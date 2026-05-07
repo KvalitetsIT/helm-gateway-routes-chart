@@ -4,7 +4,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: ReferenceGrant
 metadata:
-  {{- include "common.metadata" (dict "root" $ "metadata" (dict) "name" (printf "%s-gateway" .Release.Name) "namespace" .Release.Namespace) | nindent 2 }}
+  {{- include "gateway-routes.metadata" (dict "root" $ "metadata" (dict) "name" (printf "%s-gateway" .Release.Name) "namespace" .Release.Namespace) | nindent 2 }}
 spec:
   from:
     - group: gateway.networking.k8s.io

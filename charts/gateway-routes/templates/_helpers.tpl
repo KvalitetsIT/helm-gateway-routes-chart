@@ -1,7 +1,7 @@
 {{/*
 Resolve the effective gateway for a route, merging route-level overrides with chart defaults.
 */}}
-{{- define "route.gateway" -}}
+{{- define "gateway-routes.route.gateway" -}}
 {{- merge (default dict .route.gateway) .root.Values.defaults.gateway | toYaml -}}
 {{- end }}
 
@@ -10,7 +10,7 @@ Resolve the listener config for a given hostname index.
 Uses listeners[index] if it exists, falls back to listeners[0] as a template.
 Returns empty if no explicit listeners are defined.
 */}}
-{{- define "route.listenerTemplate" -}}
+{{- define "gateway-routes.route.listenerTemplate" -}}
 {{- $listeners := .listeners | default list -}}
 {{- if gt (len $listeners) 0 -}}
 {{- index $listeners (min .index (sub (len $listeners) 1)) | toYaml -}}
@@ -21,10 +21,10 @@ Returns empty if no explicit listeners are defined.
 Returns "true" if any listener in the route needs cert-manager to manage its TLS certificate.
 Used to determine whether to add the cert-manager.io/cluster-issuer annotation.
 */}}
-{{- define "route.hasCertManagerTLS" -}}
+{{- define "gateway-routes.route.hasCertManagerTLS" -}}
 {{- $listeners := .route.listeners | default list -}}
 {{- range $i := until (len ((default dict .route.httpRoute).hostnames | default list)) -}}
-{{- $l := (include "route.listenerTemplate" (dict "listeners" $listeners "index" $i) | fromYaml | default dict) -}}
+{{- $l := (include "gateway-routes.route.listenerTemplate" (dict "listeners" $listeners "index" $i) | fromYaml | default dict) -}}
 {{- if and (has ($l.protocol | default "HTTPS") (list "HTTPS" "TLS")) (not (default dict $l.tls).certificateRef) -}}
 {{- "true" -}}
 {{- end -}}
@@ -34,10 +34,10 @@ Used to determine whether to add the cert-manager.io/cluster-issuer annotation.
 {{/*
 Renders a single ListenerSet listener entry for a given hostname and index.
 Pass passthrough=true to render a TLS Passthrough listener (for TLSRoute).
-Usage: include "route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $namespace "passthrough" false)
+Usage: include "gateway-routes.route.listener" (dict "listeners" $listeners "index" $i "hostname" $hostname "namespace" $namespace "passthrough" false)
 */}}
-{{- define "route.listener" -}}
-{{- $l := (include "route.listenerTemplate" (dict "listeners" .listeners "index" .index) | fromYaml | default dict) -}}
+{{- define "gateway-routes.route.listener" -}}
+{{- $l := (include "gateway-routes.route.listenerTemplate" (dict "listeners" .listeners "index" .index) | fromYaml | default dict) -}}
 {{- $passthrough := .passthrough | default false -}}
 {{- $protocol := $l.protocol | default (ternary "TLS" "HTTPS" $passthrough) -}}
 {{- $isTLS := has $protocol (list "HTTPS" "TLS") -}}
@@ -72,17 +72,17 @@ Usage: include "route.listener" (dict "listeners" $listeners "index" $i "hostnam
 {{/*
 Render common metadata for a route resource.
 */}}
-{{- define "route.metadata" -}}
-{{- include "common.metadata" (dict "root" .root "metadata" (default dict .route.metadata) "name" .name "extraAnnotations" .extraAnnotations) -}}
+{{- define "gateway-routes.route.metadata" -}}
+{{- include "gateway-routes.metadata" (dict "root" .root "metadata" (default dict .route.metadata) "name" .name "extraAnnotations" .extraAnnotations) -}}
 {{- end }}
 
-{{- define "common.labels" -}}
+{{- define "gateway-routes.labels" -}}
 app.kubernetes.io/managed-by: "Helm"
 app.kubernetes.io/instance: {{ .Release.Name | quote }}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | quote }}
 {{- end }}
 
-{{- define "common.metadata" -}}
+{{- define "gateway-routes.metadata" -}}
 {{- $metadata := deepCopy (default dict .metadata) -}}
 {{- if and .name (not (hasKey $metadata "name")) -}}
 {{- $_ := set $metadata "name" .name -}}
@@ -91,7 +91,7 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | quote }}
 {{- if and $namespace (not (hasKey $metadata "namespace")) -}}
 {{- $_ := set $metadata "namespace" $namespace -}}
 {{- end -}}
-{{- $_ := set $metadata "labels" (merge (default dict $metadata.labels) (include "common.labels" .root | fromYaml)) -}}
+{{- $_ := set $metadata "labels" (merge (default dict $metadata.labels) (include "gateway-routes.labels" .root | fromYaml)) -}}
 {{- $annotations := merge (default dict .extraAnnotations) (default dict $metadata.annotations) -}}
 {{- if $annotations -}}
 {{- $_ := set $metadata "annotations" $annotations -}}
