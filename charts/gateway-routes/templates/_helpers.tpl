@@ -57,11 +57,13 @@ Usage: include "gateway-routes.route.listener" (dict "listeners" $listeners "ind
     {{- if not $isPassthrough }}
     certificateRefs:
       {{- if $tlsCfg.certificateRef }}
-      - name: {{ $tlsCfg.certificateRef.name | quote }}
+      - group: ''
+        name: {{ $tlsCfg.certificateRef.name | quote }}
         kind: Secret
         namespace: {{ $tlsCfg.certificateRef.namespace | quote }}
       {{- else }}
-      - name: {{ .hostname | quote }}
+      - group: ''
+        name: {{ .hostname | quote }}
         kind: Secret
         namespace: {{ .namespace | quote }}
       {{- end }}

@@ -36,11 +36,11 @@ spec:
     {{- range $route.tlsRoute.rules }}
     - backendRefs:
         {{- range .backendRefs }}
-        - name: {{ required (printf "routes.%s: backendRef.name is required" $name) .name | quote }}
+        - group: ''
+          kind: Service
+          name: {{ required (printf "routes.%s: backendRef.name is required" $name) .name | quote }}
           port: {{ .port | default 443 }}
-          {{- with .weight }}
-          weight: {{ . }}
-          {{- end }}
+          weight: {{ .weight | default 1 }}
         {{- end }}
     {{- end }}
 {{- end }}
