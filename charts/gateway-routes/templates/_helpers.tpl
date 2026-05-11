@@ -51,6 +51,9 @@ Usage: include "gateway-routes.route.listener" (dict "listeners" $listeners "ind
   hostname: {{ .hostname | quote }}
   protocol: {{ $protocol | quote }}
   port: {{ $l.port | default (ternary 443 80 $isTLS) }}
+  allowedRoutes:
+    namespaces:
+      from: Same
   {{- if $isTLS }}
   tls:
     mode: {{ $mode | quote }}
