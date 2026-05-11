@@ -25,6 +25,43 @@ The `listeners` field controls only protocol, port, and TLS settings — never h
 | `listeners` with N entries | Entries matched 1:1 to hostnames; first entry used as template for any extras | From `httpRoute.hostnames` |
 | `gateway.sectionName` set | No ListenerSet rendered | From `httpRoute.hostnames` |
 
+## Waypoints
+
+A waypoint is an optional per-namespace Envoy proxy that enforces L7 policy (path-based
+authorization, header policy, telemetry) on traffic into a Service. Without a waypoint, ztunnel
+only handles L4 mTLS — `AuthorizationPolicy` rules that reference HTTP methods, paths, or
+headers won't be enforced.
+
+The waypoint is deployed separately (typically by a tenant bootstrap chart) as a `Gateway` with
+`gatewayClassName: istio-waypoint`. This chart does not deploy waypoints; it only opts Services
+into the waypoint path.
+
+### Opting a Service into the waypoint
+
+A Service is routed through the waypoint when it carries these labels:
+
+| Label | Value | Effect |
+|---|---|---|
+| `istio.io/use-waypoint` | waypoint name (e.g. `waypoint`) | Routes traffic to the named waypoint. |
+| `istio.io/ingress-use-waypoint` | `"true"` | Opts *ingressgateway* traffic into the waypoint. Without this label, only east-west (pod-to-pod) traffic uses the waypoint; ingressgateway traffic bypasses it. |
+
+### The `<route-name>-mesh` wrapper Service
+
+Rather than labelling the application's existing Service, this chart renders a dedicated wrapper
+Service named `<route-name>-mesh` when `routes.<name>.service` is set. The wrapper carries the
+waypoint labels above and points at the application pods via `service.selector`. The `HTTPRoute`
+then targets the wrapper instead of the original Service.
+
+This keeps the waypoint labels off the application Service, so east-west pod-to-pod traffic
+continues to flow through ztunnel (L4 only) without taking the extra waypoint hop. Only traffic
+arriving via the ingressgateway and routed through the wrapper passes through the waypoint.
+
+When `routes.<name>.service` is set and `httpRoute.rules` is omitted, the chart defaults
+`rules` to a single catch-all rule pointing at `<route-name>-mesh` — no explicit `backendRefs`
+needed. See the [Waypoint service](#waypoint-service) and [Block paths](#block-paths) examples.
+
+The waypoint name defaults to `waypoint` and can be overridden via `service.waypoint`.
+
 ## nginx-ingress annotation migration
 
 | nginx annotation | Equivalent |
