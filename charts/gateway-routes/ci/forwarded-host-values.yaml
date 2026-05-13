@@ -1,0 +1,15 @@
+routes:
+  myapp:
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - filters:
+            - type: RequestHeaderModifier
+              requestHeaderModifier:
+                set:
+                  - name: X-Forwarded-Host
+                    value: myapp.example.com
+          backendRefs:
+            - name: myapp
+              port: 80

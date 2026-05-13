@@ -212,4 +212,21 @@ Add or override response headers using the `ResponseHeaderModifier` filter.
 {{ .Files.Get "ci/response-headers-values.yaml" -}}
 ```
 
+### Forwarded host
+
+Applications that construct URLs from `X-Forwarded-Host` (e.g. Keycloak for token issuer URLs and
+redirect URIs) require the gateway to set the header explicitly. Use `RequestHeaderModifier` with
+`set` — not `add` — so any client-supplied value is overwritten rather than appended:
+
+```yaml
+{{ .Files.Get "ci/forwarded-host-values.yaml" -}}
+```
+
+The `set` operation replaces the header unconditionally. If `add` were used instead, a client
+sending `X-Forwarded-Host: evil.com` would produce a multi-value header and the application might
+read the injected value — defeating the purpose.
+
+Each route must set the header to its own canonical hostname. There is no mesh-wide default because
+the correct value is route-specific.
+
 {{ template "helm-docs.versionFooter" . }}
