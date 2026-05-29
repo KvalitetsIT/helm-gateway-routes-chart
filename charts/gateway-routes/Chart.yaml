@@ -1,7 +1,7 @@
 apiVersion: v2
 type: application
 name: gateway-routes
-version: 0.0.0
+version: 0.0.6
 appVersion: 0.0.0
 description: >
   Helm chart for exposing services through Istio ambient mesh using Gateway API resources.
