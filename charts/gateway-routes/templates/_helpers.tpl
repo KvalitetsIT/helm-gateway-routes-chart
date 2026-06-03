@@ -2,7 +2,7 @@
 Resolve the effective gateway for a route, merging route-level overrides with chart defaults.
 */}}
 {{- define "gateway-routes.route.gateway" -}}
-{{- merge (default dict .route.gateway) .root.Values.defaults.gateway | toYaml -}}
+{{- tpl (merge (default dict .route.gateway) .root.Values.defaults.gateway | toYaml) .root -}}
 {{- end }}
 
 {{/*

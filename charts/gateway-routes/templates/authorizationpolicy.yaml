@@ -1,5 +1,6 @@
 {{- range $name, $route := .Values.routes }}
 {{- if $route }}
+{{- $route := tpl (toYaml $route) $ | fromYaml }}
 {{- range $policyName, $policy := $route.authorizationPolicies }}
 {{- if $policy }}
 {{- $routeNamespace := (default dict $route.metadata).namespace | default $.Release.Namespace }}
