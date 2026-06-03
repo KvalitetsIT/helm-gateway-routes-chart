@@ -1,8 +1,9 @@
 {{- range $name, $route := .Values.routes }}
 {{- if $route }}
+{{- $route := tpl (toYaml $route) $ | fromYaml }}
 {{- $gateway := (include "gateway-routes.route.gateway" (dict "route" $route "root" $) | fromYaml) }}
 {{- if not $gateway.sectionName }}
-{{- $clusterIssuer := $route.clusterIssuer | default $.Values.defaults.clusterIssuer }}
+{{- $clusterIssuer := $route.clusterIssuer | default (tpl (default "" $.Values.defaults.clusterIssuer) $) }}
 {{- $extraAnnotations := dict }}
 {{- if and $clusterIssuer (include "gateway-routes.route.hasCertManagerTLS" (dict "route" $route)) }}
 {{- $_ := set $extraAnnotations "cert-manager.io/cluster-issuer" $clusterIssuer }}

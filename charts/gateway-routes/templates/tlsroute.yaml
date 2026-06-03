@@ -1,5 +1,6 @@
 {{- range $name, $route := .Values.routes }}
 {{- if $route }}
+{{- $route := tpl (toYaml $route) $ | fromYaml }}
 {{- if $route.tlsRoute }}
 {{- $metadata := (include "gateway-routes.route.metadata" (dict "root" $ "route" $route "name" $name) | fromYaml) }}
 {{- $gateway := (include "gateway-routes.route.gateway" (dict "route" $route "root" $) | fromYaml) }}

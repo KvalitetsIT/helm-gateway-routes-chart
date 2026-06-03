@@ -1,5 +1,6 @@
 {{- range $name, $route := .Values.routes }}
 {{- if $route }}
+{{- $route := tpl (toYaml $route) $ | fromYaml }}
 {{- if $route.service }}
 {{- $meta := (include "gateway-routes.route.metadata" (dict "root" $ "route" $route "name" $name) | fromYaml) }}
 {{- $svcName := printf "%s-mesh" $meta.name }}
