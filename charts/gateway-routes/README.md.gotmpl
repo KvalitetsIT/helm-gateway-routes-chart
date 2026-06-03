@@ -82,6 +82,35 @@ The waypoint name defaults to `waypoint` and can be overridden via `service.wayp
 | `nginx.ingress.kubernetes.io/server-snippet` (block path) | [Block paths](#block-paths) |
 | `nginx.ingress.kubernetes.io/configuration-snippet: more_set_headers` | [Response headers](#response-headers) |
 
+## Template expressions in values
+
+All `routes` value fields support Go template expressions, at any nesting depth — including
+resource names, `service.selector`, `backendRefs[].name`, `hostnames`, TLS `certificateRef`,
+and `authorizationPolicies` rules. This lets you reference Helm variables such as
+`{{ "{{ .Release.Name }}" }}`, `{{ "{{ .Release.Namespace }}" }}`, or any `.Values` path.
+Strings containing template expressions must be quoted in YAML.
+
+The same applies to the global `defaults.gateway`, `defaults.clusterIssuer`, and
+`referenceGrant.gatewayNamespace`.
+
+#### Example:
+
+```yaml
+{{ `routes:
+  api:
+    metadata:
+      name: "{{ .Release.Name }}-api"
+    httpRoute:
+      hostnames:
+        - "{{ .Release.Name }}.example.com"
+      rules:
+        - backendRefs:
+            - name: "{{ .Release.Name }}-backend"
+    service:
+      selector:
+        app: "{{ .Release.Name }}"` }}
+```
+
 ## Examples
 
 Each `routes` entry renders a `ListenerSet`, an `HTTPRoute`, and optionally one or more `AuthorizationPolicy` resources.
