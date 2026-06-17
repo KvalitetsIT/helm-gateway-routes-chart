@@ -36,6 +36,12 @@ spec:
   rules:
     {{- if $route.httpRoute.rules }}
     {{- range $route.httpRoute.rules }}
+    {{- $ruleCtx := dict "hasRedirect" false }}
+    {{- range .filters }}
+    {{- if eq .type "RequestRedirect" }}
+    {{- $_ := set $ruleCtx "hasRedirect" true }}
+    {{- end }}
+    {{- end }}
     {{- if .backendRefs }}
     - backendRefs:
         {{- range .backendRefs }}
@@ -57,7 +63,7 @@ spec:
       filters:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-    {{- else if $route.service }}
+    {{- else if and $route.service (not $ruleCtx.hasRedirect) }}
     - backendRefs:
         - group: ''
           kind: Service
