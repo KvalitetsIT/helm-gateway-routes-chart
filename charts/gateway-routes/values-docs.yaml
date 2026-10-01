@@ -240,7 +240,8 @@ routes:
             <annotation-key>: <annotation-value>
 
         # -- Optional. Target refs for the policy.
-        # Defaults to the first backendRef service if not set.
+        # Defaults to every distinct backendRef the route serves, so a policy covers
+        # all of them. Set this explicitly to scope a policy to some of them.
         # kind defaults to "Service", group defaults to "".
         # @default -- []
         # @section -- Routes

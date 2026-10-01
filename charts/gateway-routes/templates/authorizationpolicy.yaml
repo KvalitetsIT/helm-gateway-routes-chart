@@ -5,8 +5,14 @@
 {{- if $policy }}
 {{- $routeNamespace := (default dict $route.metadata).namespace | default $.Release.Namespace }}
 {{- $metadata := (include "gateway-routes.metadata" (dict "root" $ "metadata" (default dict $policy.metadata) "name" (printf "%s-%s" $name $policyName) "namespace" $routeNamespace) | fromYaml) }}
-{{- $defaultService := ((default dict $route.httpRoute).rules | default list) | first | default dict | dig "backendRefs" (list (dict "name" "")) | first | dig "name" "" }}
-{{- if and (not $defaultService) $route.service }}{{- $defaultService = printf "%s-mesh" $name }}{{- end }}
+{{- $backends := list }}
+{{- range concat ((default dict $route.httpRoute).rules | default list) ((default dict $route.tlsRoute).rules | default list) }}
+{{- range (.backendRefs | default list) }}
+{{- with .name }}{{- $backends = append $backends . }}{{- end }}
+{{- end }}
+{{- end }}
+{{- $backends = $backends | uniq | sortAlpha }}
+{{- if and (not $backends) $route.service }}{{- $backends = list (printf "%s-mesh" $name) }}{{- end }}
 ---
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
@@ -28,9 +34,14 @@ spec:
       group: {{ .group | default "" | quote }}
     {{- end }}
     {{- else }}
-    - name: {{ required (printf "routes.%s.authorizationPolicies.%s: backendRef.name is required when targetRefs not set" $name $policyName) $defaultService | quote }}
+    {{- if not $backends }}
+    {{- fail (printf "routes.%s.authorizationPolicies.%s: targetRefs is required when the route has no backendRefs and no service" $name $policyName) }}
+    {{- end }}
+    {{- range $backends }}
+    - name: {{ . | quote }}
       kind: "Service"
       group: ""
+    {{- end }}
     {{- end }}
   action: {{ $policy.action | default "ALLOW" | quote }}
   rules:
