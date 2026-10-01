@@ -1,5 +1,3 @@
-# A route with several backends: the policy must cover all of them, not just the
-# first one listed. Reordering the rules must not change what the policy protects.
 routes:
   bifrost:
     service:
@@ -15,20 +13,26 @@ routes:
           - {}
     httpRoute:
       hostnames:
-        - bifrost.example.dk
+        - bifrost.example.com
       rules:
         - matches:
-            - path: { type: PathPrefix, value: /resolve }
+            - path:
+                type: PathPrefix
+                value: /resolve
           backendRefs:
             - name: bifrost-mesh
               port: 8000
         - matches:
-            - path: { type: PathPrefix, value: /docs }
+            - path:
+                type: PathPrefix
+                value: /docs
           backendRefs:
             - name: bifrost-docs-mesh
               port: 80
         - matches:
-            - path: { type: PathPrefix, value: / }
+            - path:
+                type: PathPrefix
+                value: /
           backendRefs:
             - name: bifrost-ui-mesh
               port: 80
