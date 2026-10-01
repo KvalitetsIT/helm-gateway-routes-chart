@@ -76,7 +76,7 @@ Helm chart for exposing services through Istio ambient mesh using Gateway API re
 | routes.\<name>.authorizationPolicies.\<policy-name>.metadata.name | string | `""` | Optional. Override the rendered AuthorizationPolicy name. |
 | routes.\<name>.authorizationPolicies.\<policy-name>.metadata.labels | object | {} | Optional. Additional labels for this AuthorizationPolicy. |
 | routes.\<name>.authorizationPolicies.\<policy-name>.metadata.annotations | object | {} | Optional. Annotations for this AuthorizationPolicy. |
-| routes.\<name>.authorizationPolicies.\<policy-name>.targetRefs | list | [] | Optional. Target refs for the policy. Defaults to the first backendRef service if not set. kind defaults to "Service", group defaults to "". |
+| routes.\<name>.authorizationPolicies.\<policy-name>.targetRefs | list | [] | Optional. Target refs for the policy. Defaults to every distinct backendRef the route serves, so a policy covers all of them. Set this explicitly to scope a policy to some of them. kind defaults to "Service", group defaults to "". |
 | routes.\<name>.authorizationPolicies.\<policy-name>.action | string | `"ALLOW"` | Optional. Policy action. Use ALLOW with remoteIpBlocks for an IP allowlist. Use DENY with notRemoteIpBlocks for a denylist. Use DENY with to.operation.paths to block specific paths. |
 | routes.\<name>.authorizationPolicies.\<policy-name>.rules | list | [] | Required. Authorization rules. |
 

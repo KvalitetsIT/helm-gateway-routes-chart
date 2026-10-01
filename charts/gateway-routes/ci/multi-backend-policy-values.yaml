@@ -1,0 +1,38 @@
+routes:
+  bifrost:
+    service:
+      selector:
+        app.kubernetes.io/name: bifrost
+      ports:
+        - port: 8000
+          targetPort: 8000
+    authorizationPolicies:
+      public:
+        action: ALLOW
+        rules:
+          - {}
+    httpRoute:
+      hostnames:
+        - bifrost.example.com
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /resolve
+          backendRefs:
+            - name: bifrost-mesh
+              port: 8000
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /docs
+          backendRefs:
+            - name: bifrost-docs-mesh
+              port: 80
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /
+          backendRefs:
+            - name: bifrost-ui-mesh
+              port: 80
