@@ -24,6 +24,10 @@ spec:
       kind: Gateway
       group: gateway.networking.k8s.io
       sectionName: {{ $gateway.sectionName | quote }}
+    {{- else if (default dict $route.listenerSet).name }}
+    - name: {{ $route.listenerSet.name | quote }}
+      kind: ListenerSet
+      group: gateway.networking.k8s.io
     {{- else }}
     - name: {{ $metadata.name | quote }}
       kind: ListenerSet

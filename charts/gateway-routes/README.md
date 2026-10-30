@@ -45,6 +45,7 @@ Helm chart for exposing services through Istio ambient mesh using Gateway API re
 | routes.\<name>.gateway.name | string | `""` | Optional. Gateway name. Defaults to defaults.gateway.name. |
 | routes.\<name>.gateway.namespace | string | `""` | Optional. Gateway namespace. Defaults to defaults.gateway.namespace. |
 | routes.\<name>.gateway.sectionName | string | `""` | Optional. Gateway listener section name. When set, the ListenerSet is skipped and the HTTPRoute attaches directly to the named Gateway listener section. Use this when a listener is managed on the Gateway itself rather than via a per-tenant ListenerSet. |
+| routes.\<name>.listenerSet.name | string | `""` | Optional. Name of an existing ListenerSet in the route namespace to attach to. When set, no ListenerSet is rendered for this route and the HTTPRoute/TLSRoute attaches to the named ListenerSet instead. Use this when several applications share one hostname with different paths: one route owns the hostname (and its ListenerSet), the others attach to it. See [Shared ListenerSet](#shared-listenerset). |
 | routes.\<name>.clusterIssuer | string | `""` | Optional. Override the default cert-manager cluster issuer for this route. Defaults to defaults.clusterIssuer. |
 | routes.\<name>.service | object | {} | Optional. Creates a waypoint wrapper Service named `<route-name>-mesh` with `istio.io/use-waypoint` and `istio.io/ingress-use-waypoint` labels, routing ingressgateway traffic through the waypoint without affecting east-west traffic. When set, `httpRoute.rules` defaults to a single catch-all rule pointing to `<route-name>-mesh` — no explicit `backendRefs` needed. |
 | routes.\<name>.service.selector | object | {} | Required. Pod selector labels for the wrapper Service. Must match the pod labels of the existing app deployment. |
@@ -64,7 +65,7 @@ Helm chart for exposing services through Istio ambient mesh using Gateway API re
 | routes.\<name>.listeners[0].tls.certificateRef.name | string | `""` | Required when certificateRef is set. Secret name. |
 | routes.\<name>.listeners[0].tls.certificateRef.namespace | string | `""` | Required when certificateRef is set. Secret namespace. |
 | routes.\<name>.httpRoute | object | {} | Required. HTTPRoute configuration. |
-| routes.\<name>.httpRoute.hostnames | list | [] | Optional. Hostnames for the HTTPRoute and auto-generated ListenerSet listeners. When `listeners` is omitted, one HTTPS listener is auto-generated per hostname here. When `listeners` is set, this field is unused for the ListenerSet — hostnames are collected from the listener entries instead. Required when `gateway.sectionName` is set (no ListenerSet rendered). |
+| routes.\<name>.httpRoute.hostnames | list | [] | Optional. Hostnames for the HTTPRoute and auto-generated ListenerSet listeners. When `listeners` is omitted, one HTTPS listener is auto-generated per hostname here. When `listeners` is set, this field is unused for the ListenerSet — hostnames are collected from the listener entries instead. Required when `gateway.sectionName` is set (no ListenerSet rendered). When `listenerSet.name` is set, hostnames are optional and default to the hostnames of the attached ListenerSet's listeners. When no hostnames are set, no ListenerSet is rendered. |
 | routes.\<name>.httpRoute.rules | list | [] | Optional. Routing rules. When omitted and `service` is defined, defaults to a single catch-all rule pointing to `<route-name>-mesh`. Required otherwise. |
 | routes.\<name>.httpRoute.rules[0].matches | list | [] | Optional. Match conditions (path, headers, method). If omitted, the rule matches all requests. |
 | routes.\<name>.httpRoute.rules[0].filters | list | [] | Optional. Filters to apply (URLRewrite, RequestRedirect, RequestHeaderModifier). |
@@ -91,6 +92,8 @@ The `listeners` field controls only protocol, port, and TLS settings — never h
 | `listeners` with one entry | That entry used as a template for all hostnames | From `httpRoute.hostnames` |
 | `listeners` with N entries | Entries matched 1:1 to hostnames; first entry used as template for any extras | From `httpRoute.hostnames` |
 | `gateway.sectionName` set | No ListenerSet rendered | From `httpRoute.hostnames` |
+| `listenerSet.name` set | No ListenerSet rendered; attaches to the named ListenerSet | From `httpRoute.hostnames`, or inherited from the ListenerSet when omitted |
+| No hostnames | No ListenerSet rendered | — |
 
 ## Waypoints
 
@@ -391,6 +394,44 @@ routes:
             - name: myapp
               port: 80
 ```
+
+### Shared ListenerSet
+
+Several applications can serve different paths on the same hostname. A hostname can only be
+claimed by one listener per Gateway — a second ListenerSet with the same hostname and port is
+rejected with `HostnameConflict`. Let one route own the hostname (and its ListenerSet), and let
+the other routes attach to it with `listenerSet.name`. Each application keeps its own HTTPRoute.
+
+The routes must be in the same namespace as the ListenerSet (listeners use `allowedRoutes.namespaces.from: Same`).
+
+```yaml
+routes:
+  myapp-ui:
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - backendRefs:
+            - name: myapp-ui
+              port: 80
+  myapp-api:
+    listenerSet:
+      name: myapp-ui
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /api
+          backendRefs:
+            - name: myapp-api
+              port: 8080
+```
+
+In practice the two routes usually live in different releases — each application's own values
+file contains only its own route.
 
 ### Client certificate authentication
 

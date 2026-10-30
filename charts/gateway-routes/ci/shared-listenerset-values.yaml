@@ -1,0 +1,23 @@
+routes:
+  myapp-ui:
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - backendRefs:
+            - name: myapp-ui
+              port: 80
+  myapp-api:
+    listenerSet:
+      name: myapp-ui
+    httpRoute:
+      hostnames:
+        - myapp.example.com
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /api
+          backendRefs:
+            - name: myapp-api
+              port: 8080
