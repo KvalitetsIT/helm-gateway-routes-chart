@@ -24,6 +24,8 @@ The `listeners` field controls only protocol, port, and TLS settings — never h
 | `listeners` with one entry | That entry used as a template for all hostnames | From `httpRoute.hostnames` |
 | `listeners` with N entries | Entries matched 1:1 to hostnames; first entry used as template for any extras | From `httpRoute.hostnames` |
 | `gateway.sectionName` set | No ListenerSet rendered | From `httpRoute.hostnames` |
+| `listenerSet.name` set | No ListenerSet rendered; attaches to the named ListenerSet | From `httpRoute.hostnames`, or inherited from the ListenerSet when omitted |
+| No hostnames | No ListenerSet rendered | — |
 
 ## Waypoints
 
@@ -190,6 +192,22 @@ Setting `gateway.sectionName` skips the ListenerSet entirely — no cert-manager
 ```yaml
 {{ .Files.Get "ci/shared-gateway-values.yaml" -}}
 ```
+
+### Shared ListenerSet
+
+Several applications can serve different paths on the same hostname. A hostname can only be
+claimed by one listener per Gateway — a second ListenerSet with the same hostname and port is
+rejected with `HostnameConflict`. Let one route own the hostname (and its ListenerSet), and let
+the other routes attach to it with `listenerSet.name`. Each application keeps its own HTTPRoute.
+
+The routes must be in the same namespace as the ListenerSet (listeners use `allowedRoutes.namespaces.from: Same`).
+
+```yaml
+{{ .Files.Get "ci/shared-listenerset-values.yaml" -}}
+```
+
+In practice the two routes usually live in different releases — each application's own values
+file contains only its own route.
 
 ### Client certificate authentication
 

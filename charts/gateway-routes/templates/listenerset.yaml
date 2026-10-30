@@ -2,7 +2,8 @@
 {{- if $route }}
 {{- $route := tpl (toYaml $route) $ | fromYaml }}
 {{- $gateway := (include "gateway-routes.route.gateway" (dict "route" $route "root" $) | fromYaml) }}
-{{- if not $gateway.sectionName }}
+{{- $hostnames := concat ((default dict $route.httpRoute).hostnames | default list) ((default dict $route.tlsRoute).hostnames | default list) }}
+{{- if and (not $gateway.sectionName) (not (default dict $route.listenerSet).name) $hostnames }}
 {{- $clusterIssuer := $route.clusterIssuer | default (tpl (default "" $.Values.defaults.clusterIssuer) $) }}
 {{- $extraAnnotations := dict }}
 {{- if and $clusterIssuer (include "gateway-routes.route.hasCertManagerTLS" (dict "route" $route)) }}

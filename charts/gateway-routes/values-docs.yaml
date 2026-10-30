@@ -74,6 +74,15 @@ routes:
       # @section -- Routes
       sectionName: ""
 
+    listenerSet:
+      # -- Optional. Name of an existing ListenerSet in the route namespace to attach to.
+      # When set, no ListenerSet is rendered for this route and the HTTPRoute/TLSRoute
+      # attaches to the named ListenerSet instead. Use this when several applications
+      # share one hostname with different paths: one route owns the hostname (and its
+      # ListenerSet), the others attach to it. See [Shared ListenerSet](#shared-listenerset).
+      # @section -- Routes
+      name: ""
+
     # -- Optional. Override the default cert-manager cluster issuer for this route.
     # Defaults to defaults.clusterIssuer.
     # @section -- Routes
@@ -167,6 +176,9 @@ routes:
       # When `listeners` is set, this field is unused for the ListenerSet — hostnames are
       # collected from the listener entries instead.
       # Required when `gateway.sectionName` is set (no ListenerSet rendered).
+      # When `listenerSet.name` is set, hostnames are optional and default to the
+      # hostnames of the attached ListenerSet's listeners.
+      # When no hostnames are set, no ListenerSet is rendered.
       # @default -- []
       # @section -- Routes
       hostnames:
